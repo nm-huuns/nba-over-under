@@ -1,0 +1,18 @@
+node_modules/
+.next/
+.env.local
+.env*.local
+
+# Generated data (gitignored, seeded separately)
+data/picks.json
+data/standings.json
+data/scores.json
+data/teams.json
+data/lock.json
+
+# Keep example templates
+!data/*.example.json
+
+.DS_Store
+tsconfig.tsbuildinfo
+.vercel
