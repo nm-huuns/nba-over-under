@@ -23,88 +23,106 @@ function latestPerPerson(submissions: Submission[]): Submission[] {
 
 export default function Submissions({ lockState, submissions, teams }: Props) {
   const latest = latestPerPerson(submissions);
-  const east = teams.filter((t) => t.conference === "East");
-  const west = teams.filter((t) => t.conference === "West");
 
   if (latest.length === 0) {
+    return <p className="text-muted text-sm py-8">No submissions yet.</p>;
+  }
+
+  // ── Pre-lock: just show who has submitted ───────────────────────────────────
+  if (!lockState.locked) {
     return (
-      <p className="text-muted text-sm py-8">No submissions yet.</p>
+      <div>
+        <p className="text-sm text-muted mb-4">
+          {latest.length} picker{latest.length !== 1 ? "s" : ""} submitted — picks hidden until submissions are locked.
+        </p>
+        <div className="space-y-2">
+          {latest.map((sub) => (
+            <div key={sub.name} className="flex items-center justify-between py-2 border-b border-foreground/5">
+              <span className="font-semibold">{sub.name}</span>
+              <span className="text-xs text-muted">
+                {new Date(sub.submittedAt).toLocaleDateString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
+  // ── Post-lock: team-by-team view ────────────────────────────────────────────
+  const east = teams.filter((t) => t.conference === "East");
+  const west = teams.filter((t) => t.conference === "West");
+
   return (
-    <div>
-      <p className="text-sm text-muted mb-6">
-        {latest.length} picker{latest.length !== 1 ? "s" : ""} submitted
-        {!lockState.locked && " — picks hidden until submissions are locked"}.
+    <div className="space-y-8">
+      <p className="text-sm text-muted">
+        {latest.length} picker{latest.length !== 1 ? "s" : ""} · submissions locked
       </p>
 
-      <div className="space-y-4">
-        {latest.map((sub) => {
-          const subLocks = new Set(sub.locks ?? []);
+      {[
+        { label: "Eastern Conference", conf: east },
+        { label: "Western Conference", conf: west },
+      ].map(({ label, conf }) => (
+        <section key={label}>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted mb-3">
+            {label}
+          </h2>
+          <div className="space-y-px">
+            {conf.map((team) => (
+              <div
+                key={team.id}
+                className="flex items-center gap-3 py-2.5 border-b border-foreground/5"
+              >
+                {/* Team */}
+                <div className="flex items-center gap-2 w-44 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={teamLogoUrl(team.id)}
+                    alt={team.id}
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 object-contain shrink-0"
+                  />
+                  <span className="text-sm truncate">{team.name}</span>
+                </div>
 
-          return (
-            <div key={sub.name} className="border border-foreground/10 rounded-lg p-4">
-              <div className="flex items-baseline justify-between mb-3">
-                <span className="font-bold text-lg">{sub.name}</span>
-                <span className="text-xs text-muted">
-                  {subLocks.size > 0 && `${subLocks.size} lock${subLocks.size !== 1 ? "s" : ""} · `}
-                  {new Date(sub.submittedAt).toLocaleDateString()}
+                {/* Line */}
+                <span className="w-10 text-xs font-mono text-muted shrink-0 text-right">
+                  {team.line ?? "–"}
                 </span>
-              </div>
 
-              {/* Picks hidden until locked */}
-              {!lockState.locked ? (
-                <p className="text-xs text-muted italic">Picks hidden until submissions close.</p>
-              ) : (
-                <>
-                  {[
-                    { label: "East", conf: east },
-                    { label: "West", conf: west },
-                  ].map(({ label, conf }) => (
-                    <div key={label} className="mb-2">
-                      <div className="text-[0.65rem] font-bold uppercase tracking-widest text-muted mb-1">
-                        {label}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {conf.map((team) => {
-                          const pick = sub.picks[team.id];
-                          const isLock = subLocks.has(team.id);
-                          return (
-                            <span
-                              key={team.id}
-                              className={`flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded ${
-                                isLock ? "ring-1 ring-accent font-bold" : ""
-                              } ${
-                                pick === "over"
-                                  ? "bg-over/15 text-over"
-                                  : pick === "under"
-                                  ? "bg-under/15 text-under"
-                                  : "text-muted"
-                              }`}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={teamLogoUrl(team.id)}
-                                alt={team.id}
-                                width={12}
-                                height={12}
-                                className="w-3 h-3 object-contain"
-                              />
-                              {isLock ? "🔒" : ""}
-                              {pick === "over" ? "O" : pick === "under" ? "U" : "–"}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {/* Each picker's choice */}
+                <div className="flex flex-wrap gap-1.5 flex-1">
+                  {latest.map((sub) => {
+                    const pick = sub.picks[team.id];
+                    const isLock = (sub.locks ?? []).includes(team.id);
+                    return (
+                      <span
+                        key={sub.name}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${
+                          isLock ? "ring-1 ring-accent" : ""
+                        } ${
+                          pick === "over"
+                            ? "bg-over/15 text-over font-semibold"
+                            : pick === "under"
+                            ? "bg-under/15 text-under font-semibold"
+                            : "bg-foreground/5 text-muted"
+                        }`}
+                      >
+                        {isLock && "🔒"}
+                        <span>{sub.name}</span>
+                        <span className="font-bold font-mono">
+                          {pick === "over" ? "O" : pick === "under" ? "U" : "–"}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
