@@ -19,7 +19,7 @@ function latestPerPerson(submissions: Submission[]): Submission[] {
       map.set(key, sub);
     }
   }
-  const AI_NAMES = new Set(["gemini 3", "claude opus"]);
+  const AI_NAMES = new Set(["gemini 3", "claude opus", "gpt-6"]);
   const isAI = (name: string) => AI_NAMES.has(name.trim().toLowerCase());
   return Array.from(map.values()).sort((a, b) => {
     const aAI = isAI(a.name), bAI = isAI(b.name);

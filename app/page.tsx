@@ -28,7 +28,7 @@ export default async function Home() {
   return (
     <>
       <header className="bg-black px-4 sm:px-6 py-5">
-        <div className="max-w-[920px] mx-auto flex items-end justify-between">
+        <div className="max-w-[1400px] mx-auto flex items-end justify-between">
           <h1 className="text-[2.2rem] font-black leading-none tracking-[-0.05em] text-white">
             Over/Under
             <br />
@@ -40,7 +40,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="max-w-[920px] mx-auto px-4 sm:px-6 w-full pb-16">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 w-full pb-16">
         <PicksTabs
           lockState={lockState as LockState}
           submissions={submissions as Submission[]}
