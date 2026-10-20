@@ -8,6 +8,7 @@ import { readJson } from "@/lib/storage";
 import { TEAMS } from "@/lib/teams";
 import type { DailyScore, LockState, Submission, StandingsData, Team } from "@/lib/types";
 import PicksTabs from "./PicksTabs";
+import ThemeToggle from "./ThemeToggle";
 
 export default async function Home() {
   const [lockState, submissions, standings, scores, storedTeams] =
@@ -34,8 +35,11 @@ export default async function Home() {
             <br />
             <em className="not-italic text-accent">Picks.</em>
           </h1>
-          <div className="text-[0.75rem] font-bold tracking-[0.1em] text-[#555] uppercase pb-1">
-            2026–27 Season
+          <div className="flex items-end gap-4">
+            <div className="text-[0.75rem] font-bold tracking-[0.1em] text-[#555] uppercase pb-1">
+              2026–27 Season
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
