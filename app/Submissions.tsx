@@ -19,7 +19,13 @@ function latestPerPerson(submissions: Submission[]): Submission[] {
       map.set(key, sub);
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const AI_NAMES = new Set(["gemini 3", "claude opus"]);
+  const isAI = (name: string) => AI_NAMES.has(name.trim().toLowerCase());
+  return Array.from(map.values()).sort((a, b) => {
+    const aAI = isAI(a.name), bAI = isAI(b.name);
+    if (aAI !== bAI) return aAI ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 function calcScore(
