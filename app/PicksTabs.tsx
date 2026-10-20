@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { DailyScore, LockState, Submission, StandingsData, Team } from "@/lib/types";
 import SubmitForm from "./SubmitForm";
 import Leaderboard from "./Leaderboard";
-import StandingsTable from "./StandingsTable";
 import Submissions from "./Submissions";
 
 interface Props {
@@ -15,7 +14,7 @@ interface Props {
   teams: Team[];
 }
 
-const TABS = ["Leaderboard", "Submit Picks", "Submissions", "Standings"] as const;
+const TABS = ["Leaderboard", "Submit Picks", "Submissions"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function PicksTabs({
@@ -29,7 +28,7 @@ export default function PicksTabs({
 
   return (
     <div className="mt-6">
-      <div className="flex gap-1 border-b border-foreground/10 mb-6 overflow-x-auto">
+      <div className="flex gap-1 border-b border-foreground/10 mb-6">
         {TABS.map((tab) => {
           const badge =
             tab === "Submissions" && submissions.length > 0
@@ -61,10 +60,12 @@ export default function PicksTabs({
         <SubmitForm lockState={lockState} teams={teams} />
       )}
       {active === "Submissions" && (
-        <Submissions lockState={lockState} submissions={submissions} teams={teams} />
-      )}
-      {active === "Standings" && (
-        <StandingsTable standings={standings} teams={teams} />
+        <Submissions
+          lockState={lockState}
+          submissions={submissions}
+          teams={teams}
+          standings={standings}
+        />
       )}
     </div>
   );

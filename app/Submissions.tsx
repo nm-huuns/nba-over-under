@@ -1,12 +1,13 @@
 "use client";
 
-import type { LockState, Submission, Team } from "@/lib/types";
+import type { LockState, Submission, StandingsData, Team } from "@/lib/types";
 import { teamLogoUrl } from "@/lib/teams";
 
 interface Props {
   lockState: LockState;
   submissions: Submission[];
   teams: Team[];
+  standings: StandingsData | null;
 }
 
 function latestPerPerson(submissions: Submission[]): Submission[] {
@@ -21,108 +22,237 @@ function latestPerPerson(submissions: Submission[]): Submission[] {
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export default function Submissions({ lockState, submissions, teams }: Props) {
+function calcScore(
+  pick: "over" | "under",
+  projectedWins: number,
+  line: number,
+  isLock: boolean
+): number {
+  if (projectedWins === line) return 0;
+  const diff = Math.round(Math.abs(projectedWins - line));
+  const correct =
+    (pick === "over" && projectedWins > line) ||
+    (pick === "under" && projectedWins < line);
+  const base = correct ? 5 + diff : -5 - diff;
+  return isLock ? base * 2 : base;
+}
+
+function fmt(n: number) {
+  return n.toFixed(1);
+}
+
+export default function Submissions({ lockState, submissions, teams, standings }: Props) {
   const latest = latestPerPerson(submissions);
+  const standingsMap = new Map((standings?.teams ?? []).map((s) => [s.id, s]));
+
+  const east = teams.filter((t) => t.conference === "East");
+  const west = teams.filter((t) => t.conference === "West");
+  const colSpan = 5 + (lockState.locked ? latest.length : 0);
+
+  // Compute running totals per picker (for footer row)
+  const runningTotals: Record<string, number> = {};
+  if (lockState.locked) {
+    for (const sub of latest) {
+      let total = 0;
+      const locks = new Set(sub.locks ?? []);
+      for (const team of teams) {
+        if (team.line === null) continue;
+        const pick = sub.picks[team.id];
+        if (!pick) continue;
+        const s = standingsMap.get(team.id);
+        if (!s || s.gamesPlayed === 0) continue;
+        total += calcScore(pick, s.projectedWins, team.line, locks.has(team.id));
+      }
+      runningTotals[sub.name] = total;
+    }
+  }
 
   if (latest.length === 0) {
     return <p className="text-muted text-sm py-8">No submissions yet.</p>;
   }
 
-  // ── Pre-lock: just show who has submitted ───────────────────────────────────
-  if (!lockState.locked) {
-    return (
-      <div>
-        <p className="text-sm text-muted mb-4">
-          {latest.length} picker{latest.length !== 1 ? "s" : ""} submitted — picks hidden until submissions are locked.
-        </p>
-        <div className="space-y-2">
-          {latest.map((sub) => (
-            <div key={sub.name} className="flex items-center justify-between py-2 border-b border-foreground/5">
-              <span className="font-semibold">{sub.name}</span>
-              <span className="text-xs text-muted">
-                {new Date(sub.submittedAt).toLocaleDateString()}
-              </span>
+  const tableRows = (conf: Team[]) =>
+    conf.map((team) => {
+      const s = standingsMap.get(team.id);
+      const projectedWins = s && s.gamesPlayed > 0 ? s.projectedWins : null;
+      const diff =
+        projectedWins !== null && team.line !== null
+          ? projectedWins - team.line
+          : null;
+
+      return (
+        <tr key={team.id} className="border-b border-foreground/5 hover:bg-foreground/[0.02]">
+          {/* Team */}
+          <td className="py-2 pr-3 whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={teamLogoUrl(team.id)}
+                alt={team.id}
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain shrink-0"
+              />
+              <span className="text-sm">{team.name}</span>
             </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+          </td>
 
-  // ── Post-lock: team-by-team view ────────────────────────────────────────────
-  const east = teams.filter((t) => t.conference === "East");
-  const west = teams.filter((t) => t.conference === "West");
+          {/* Line */}
+          <td className="py-2 px-3 text-right font-mono text-sm text-muted whitespace-nowrap">
+            {team.line ?? "–"}
+          </td>
 
-  return (
-    <div className="space-y-8">
-      <p className="text-sm text-muted">
-        {latest.length} picker{latest.length !== 1 ? "s" : ""} · submissions locked
-      </p>
+          {/* W */}
+          <td className="py-2 px-2 text-right font-mono text-sm whitespace-nowrap">
+            {s?.wins ?? "–"}
+          </td>
 
-      {[
-        { label: "Eastern Conference", conf: east },
-        { label: "Western Conference", conf: west },
-      ].map(({ label, conf }) => (
-        <section key={label}>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-muted mb-3">
-            {label}
-          </h2>
-          <div className="space-y-px">
-            {conf.map((team) => (
-              <div
-                key={team.id}
-                className="flex items-center gap-3 py-2.5 border-b border-foreground/5"
+          {/* L */}
+          <td className="py-2 px-2 text-right font-mono text-sm whitespace-nowrap">
+            {s?.losses ?? "–"}
+          </td>
+
+          {/* Proj W */}
+          <td className="py-2 pl-2 pr-4 text-right font-mono text-sm whitespace-nowrap">
+            {projectedWins !== null ? (
+              <span
+                className={
+                  diff === null ? "text-muted" : diff > 0 ? "text-over" : diff < 0 ? "text-under" : "text-muted"
+                }
               >
-                {/* Team */}
-                <div className="flex items-center gap-2 w-44 shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={teamLogoUrl(team.id)}
-                    alt={team.id}
-                    width={20}
-                    height={20}
-                    className="w-5 h-5 object-contain shrink-0"
-                  />
-                  <span className="text-sm truncate">{team.name}</span>
-                </div>
+                {fmt(projectedWins)}
+              </span>
+            ) : (
+              <span className="text-muted">–</span>
+            )}
+          </td>
 
-                {/* Line */}
-                <span className="w-10 text-xs font-mono text-muted shrink-0 text-right">
-                  {team.line ?? "–"}
-                </span>
+          {/* Per-picker columns (locked only) */}
+          {lockState.locked &&
+            latest.map((sub) => {
+              const pick = sub.picks[team.id];
+              const isLock = (sub.locks ?? []).includes(team.id);
+              const score =
+                pick && projectedWins !== null && team.line !== null && s && s.gamesPlayed > 0
+                  ? calcScore(pick, projectedWins, team.line, isLock)
+                  : null;
 
-                {/* Each picker's choice */}
-                <div className="flex flex-wrap gap-1.5 flex-1">
-                  {latest.map((sub) => {
-                    const pick = sub.picks[team.id];
-                    const isLock = (sub.locks ?? []).includes(team.id);
-                    return (
+              return (
+                <td key={sub.name} className="py-2 px-3 text-center whitespace-nowrap">
+                  {pick ? (
+                    <div className="inline-flex flex-col items-center gap-0.5">
                       <span
-                        key={sub.name}
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${
-                          isLock ? "ring-1 ring-accent" : ""
-                        } ${
-                          pick === "over"
-                            ? "bg-over/15 text-over font-semibold"
-                            : pick === "under"
-                            ? "bg-under/15 text-under font-semibold"
-                            : "bg-foreground/5 text-muted"
+                        className={`text-xs font-bold ${
+                          score === null ? "text-muted" : score > 0 ? "text-over" : score < 0 ? "text-under" : "text-muted"
                         }`}
                       >
-                        {isLock && "🔒"}
-                        <span>{sub.name}</span>
-                        <span className="font-bold font-mono">
-                          {pick === "over" ? "O" : pick === "under" ? "U" : "–"}
-                        </span>
+                        {isLock ? "🔒 " : ""}
+                        {pick === "over" ? "Over" : "Under"}
                       </span>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
+                      {score !== null && (
+                        <span
+                          className={`text-[0.65rem] font-mono font-semibold leading-none ${
+                            score > 0 ? "text-over" : score < 0 ? "text-under" : "text-muted"
+                          }`}
+                        >
+                          {score > 0 ? "+" : ""}
+                          {score}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted text-xs">–</span>
+                  )}
+                </td>
+              );
+            })}
+        </tr>
+      );
+    });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-muted">
+          {latest.length} picker{latest.length !== 1 ? "s" : ""}
+          {!lockState.locked && " — picks hidden until submissions are locked"}
+          {standings && (
+            <span className="ml-2">
+              · updated {new Date(standings.fetchedAt).toLocaleDateString()}
+            </span>
+          )}
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b border-foreground/10">
+              <th className="text-left py-2 pr-3 text-xs font-semibold text-muted whitespace-nowrap">Team</th>
+              <th className="text-right py-2 px-3 text-xs font-semibold text-muted whitespace-nowrap">Line</th>
+              <th className="text-right py-2 px-2 text-xs font-semibold text-muted">W</th>
+              <th className="text-right py-2 px-2 text-xs font-semibold text-muted">L</th>
+              <th className="text-right py-2 pl-2 pr-4 text-xs font-semibold text-muted whitespace-nowrap">Proj W</th>
+              {lockState.locked &&
+                latest.map((sub) => (
+                  <th
+                    key={sub.name}
+                    className="text-center py-2 px-3 text-xs font-semibold text-foreground whitespace-nowrap"
+                  >
+                    {sub.name}
+                  </th>
+                ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* East */}
+            <tr>
+              <td
+                colSpan={colSpan}
+                className="pt-4 pb-1 text-[0.65rem] font-bold uppercase tracking-widest text-muted"
+              >
+                Eastern Conference
+              </td>
+            </tr>
+            {tableRows(east)}
+
+            {/* West */}
+            <tr>
+              <td
+                colSpan={colSpan}
+                className="pt-5 pb-1 text-[0.65rem] font-bold uppercase tracking-widest text-muted"
+              >
+                Western Conference
+              </td>
+            </tr>
+            {tableRows(west)}
+
+            {/* Totals row */}
+            {lockState.locked && (
+              <tr className="border-t-2 border-foreground/20">
+                <td colSpan={5} className="py-3 pr-4 text-sm font-bold text-right">
+                  Total
+                </td>
+                {latest.map((sub) => {
+                  const total = runningTotals[sub.name] ?? 0;
+                  return (
+                    <td key={sub.name} className="py-3 px-3 text-center">
+                      <span
+                        className={`text-sm font-bold font-mono ${
+                          total > 0 ? "text-over" : total < 0 ? "text-under" : "text-muted"
+                        }`}
+                      >
+                        {total > 0 ? "+" : ""}
+                        {total}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
