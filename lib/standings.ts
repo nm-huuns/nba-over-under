@@ -2,7 +2,7 @@ import { readJson, writeJson } from "./storage";
 import type { StandingEntry, StandingsData } from "./types";
 
 const STANDINGS_URL =
-  "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/standings";
+  "https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings";
 const GAMES_PER_SEASON = 82;
 
 // ESPN abbreviations that differ from our team IDs
