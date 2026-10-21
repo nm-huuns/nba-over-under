@@ -21,6 +21,13 @@ const LINE_COLORS = [
   "#f59e0b", "#ec4899", "#06b6d4", "#84cc16",
 ];
 
+const AI_NAMES = new Set(["gemini 3", "claude opus", "gpt-6"]);
+const AI_GREYS = ["#888888", "#aaaaaa", "#666666"];
+
+function isAI(name: string) {
+  return AI_NAMES.has(name.trim().toLowerCase());
+}
+
 function formatDate(iso: string): string {
   const [, m, d] = iso.split("-");
   return `${parseInt(m)}/${parseInt(d)}`;
@@ -35,10 +42,11 @@ export default function Leaderboard({ scores }: Props) {
     );
   }
 
-  // Collect all unique names in order of first appearance
-  const names = Array.from(
-    new Set(scores.flatMap((s) => Object.keys(s.totals)))
-  );
+  // Collect all unique names: humans first (alphabetical), AIs last
+  const allNames = Array.from(new Set(scores.flatMap((s) => Object.keys(s.totals))));
+  const humans = allNames.filter((n) => !isAI(n)).sort((a, b) => a.localeCompare(b));
+  const ais = allNames.filter((n) => isAI(n)).sort((a, b) => a.localeCompare(b));
+  const names = [...humans, ...ais];
 
   // Shape data for recharts: [{date, Name1: score, Name2: score, ...}]
   const chartData = scores.map((s) => {
@@ -60,7 +68,7 @@ export default function Leaderboard({ scores }: Props) {
       {/* Line chart */}
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.07} />
             <XAxis
               dataKey="date"
@@ -81,18 +89,28 @@ export default function Leaderboard({ scores }: Props) {
                 fontSize: 12,
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-            {names.map((name, i) => (
-              <Line
-                key={name}
-                type="monotone"
-                dataKey={name}
-                stroke={LINE_COLORS[i % LINE_COLORS.length]}
-                strokeWidth={2}
-                dot={false}
-                connectNulls
-              />
-            ))}
+            <Legend
+              layout="vertical"
+              align="right"
+              verticalAlign="middle"
+              wrapperStyle={{ fontSize: 12, paddingLeft: 16 }}
+            />
+            {names.map((name, i) => {
+              const ai = isAI(name);
+              const aiIndex = ais.indexOf(name);
+              return (
+                <Line
+                  key={name}
+                  type="monotone"
+                  dataKey={name}
+                  stroke={ai ? AI_GREYS[aiIndex % AI_GREYS.length] : LINE_COLORS[i % LINE_COLORS.length]}
+                  strokeWidth={ai ? 1.5 : 2}
+                  strokeDasharray={ai ? "4 4" : undefined}
+                  dot={false}
+                  connectNulls
+                />
+              );
+            })}
           </LineChart>
         </ResponsiveContainer>
       </div>
