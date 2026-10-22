@@ -17,8 +17,8 @@ interface Props {
 }
 
 const LINE_COLORS = [
-  "#e87722", "#3b82f6", "#10b981", "#a855f7",
-  "#f59e0b", "#ec4899", "#06b6d4", "#84cc16",
+  "#6366f1", "#3b82f6", "#f59e0b", "#a855f7",
+  "#ec4899", "#06b6d4", "#84cc16", "#e87722",
 ];
 
 const AI_NAMES = new Set(["gemini 3", "claude opus", "gpt-6"]);
