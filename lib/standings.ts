@@ -11,6 +11,8 @@ const ESPN_ID_MAP: Record<string, string> = {
   GS: "GSW",
   SA: "SAS",
   NY: "NYK",
+  WSH: "WAS",
+  UTAH: "UTA",
 };
 
 function normalizeId(espnAbbrev: string): string {
