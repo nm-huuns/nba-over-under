@@ -2,7 +2,6 @@
 
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -57,6 +56,17 @@ export default function Leaderboard({ scores }: Props) {
     return entry;
   });
 
+  // Build name → chart colour map
+  const colorMap: Record<string, string> = {};
+  let humanIdx = 0;
+  for (const name of names) {
+    if (isAI(name)) {
+      colorMap[name] = AI_GREYS[ais.indexOf(name) % AI_GREYS.length];
+    } else {
+      colorMap[name] = LINE_COLORS[humanIdx++ % LINE_COLORS.length];
+    }
+  }
+
   // Latest scores for the rankings table
   const latestTotals = scores[scores.length - 1].totals;
   const rankings = Object.entries(latestTotals)
@@ -68,7 +78,7 @@ export default function Leaderboard({ scores }: Props) {
       {/* Line chart */}
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.07} />
             <XAxis
               dataKey="date"
@@ -89,12 +99,7 @@ export default function Leaderboard({ scores }: Props) {
                 fontSize: 12,
               }}
             />
-            <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
-              wrapperStyle={{ fontSize: 12, paddingLeft: 16 }}
-            />
+
             {names.map((name, i) => {
               const ai = isAI(name);
               const aiIndex = ais.indexOf(name);
@@ -121,27 +126,28 @@ export default function Leaderboard({ scores }: Props) {
           Current Standings
         </h2>
         <div className="space-y-1">
-          {rankings.map(({ rank, name, score }) => (
-            <div
-              key={name}
-              className={`flex items-center gap-4 px-3 py-2.5 rounded ${
-                rank === 1 ? "bg-accent/10" : "bg-foreground/3"
-              }`}
-            >
-              <span className="w-5 text-sm font-bold text-muted text-right shrink-0">
-                {rank}
-              </span>
-              <span className="flex-1 font-semibold">{name}</span>
-              <span
-                className={`font-mono font-bold text-sm ${
-                  score > 0 ? "text-over" : score < 0 ? "text-under" : "text-muted"
+          {rankings.map(({ rank, name, score }) => {
+            const color = colorMap[name];
+            return (
+              <div
+                key={name}
+                className={`flex items-center gap-4 px-3 py-2.5 rounded ${
+                  rank === 1 ? "bg-accent/10" : "bg-foreground/3"
                 }`}
               >
-                {score > 0 ? "+" : ""}
-                {score}
-              </span>
-            </div>
-          ))}
+                <span className="w-5 text-sm font-bold text-muted text-right shrink-0">
+                  {rank}
+                </span>
+                <span className="flex-1 font-semibold" style={{ color }}>
+                  {name}
+                </span>
+                <span className="font-mono font-bold text-sm" style={{ color }}>
+                  {score > 0 ? "+" : ""}
+                  {score}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
