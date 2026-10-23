@@ -141,7 +141,11 @@ export default function Leaderboard({ scores }: Props) {
                 <span className="flex-1 font-semibold" style={{ color }}>
                   {name}
                 </span>
-                <span className="font-mono font-bold text-sm" style={{ color }}>
+                <span
+                  className={`font-mono font-bold text-sm ${
+                    score > 0 ? "text-over" : score < 0 ? "text-under" : "text-muted"
+                  }`}
+                >
                   {score > 0 ? "+" : ""}
                   {score}
                 </span>
