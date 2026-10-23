@@ -25,11 +25,14 @@ export default function PicksTabs({
   teams,
 }: Props) {
   const [active, setActive] = useState<Tab>("Leaderboard");
+  const visibleTabs = TABS.filter(
+    (tab) => !(tab === "Submit Picks" && lockState.locked)
+  );
 
   return (
     <div className="mt-6">
       <div className="flex gap-1 border-b border-foreground/10 mb-6">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const badge =
             tab === "Submissions" && submissions.length > 0
               ? submissions.length
