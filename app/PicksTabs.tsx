@@ -14,7 +14,7 @@ interface Props {
   teams: Team[];
 }
 
-const TABS = ["Leaderboard", "Submit Picks", "Submissions"] as const;
+const TABS = ["Leaderboard", "Submit Picks", "Picks"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function PicksTabs({
@@ -33,26 +33,17 @@ export default function PicksTabs({
     <div className="mt-6">
       <div className="flex gap-1 border-b border-foreground/10 mb-6">
         {visibleTabs.map((tab) => {
-          const badge =
-            tab === "Submissions" && submissions.length > 0
-              ? submissions.length
-              : null;
           return (
             <button
               key={tab}
               onClick={() => setActive(tab)}
-              className={`px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors ${
                 active === tab
                   ? "border-b-2 border-accent text-accent -mb-px"
                   : "text-muted hover:text-foreground"
               }`}
             >
               {tab}
-              {badge !== null && (
-                <span className="text-[0.65rem] bg-accent/20 text-accent font-bold px-1.5 py-0.5 rounded-full leading-none">
-                  {badge}
-                </span>
-              )}
             </button>
           );
         })}
@@ -62,7 +53,7 @@ export default function PicksTabs({
       {active === "Submit Picks" && (
         <SubmitForm lockState={lockState} teams={teams} />
       )}
-      {active === "Submissions" && (
+      {active === "Picks" && (
         <Submissions
           lockState={lockState}
           submissions={submissions}
