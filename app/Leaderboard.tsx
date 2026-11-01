@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -23,6 +24,13 @@ const LINE_COLORS = [
 const AI_NAMES = new Set(["gemini 3", "claude opus", "gpt-6"]);
 const AI_GREYS = ["#888888", "#aaaaaa", "#666666"];
 
+const RANGES = [
+  { label: "Full season", days: null },
+  { label: "Last 30 days", days: 30 },
+  { label: "Last 7 days", days: 7 },
+] as const;
+type Range = (typeof RANGES)[number];
+
 function isAI(name: string) {
   return AI_NAMES.has(name.trim().toLowerCase());
 }
@@ -33,6 +41,8 @@ function formatDate(iso: string): string {
 }
 
 export default function Leaderboard({ scores }: Props) {
+  const [range, setRange] = useState<Range>(RANGES[0]);
+
   if (scores.length === 0) {
     return (
       <div className="py-16 text-center text-muted text-sm">
@@ -41,14 +51,18 @@ export default function Leaderboard({ scores }: Props) {
     );
   }
 
+  const filteredScores = range.days === null
+    ? scores
+    : scores.slice(-range.days);
+
   // Collect all unique names: humans first (alphabetical), AIs last
-  const allNames = Array.from(new Set(scores.flatMap((s) => Object.keys(s.totals))));
+  const allNames = Array.from(new Set(filteredScores.flatMap((s) => Object.keys(s.totals))));
   const humans = allNames.filter((n) => !isAI(n)).sort((a, b) => a.localeCompare(b));
   const ais = allNames.filter((n) => isAI(n)).sort((a, b) => a.localeCompare(b));
   const names = [...humans, ...ais];
 
   // Shape data for recharts: [{date, Name1: score, Name2: score, ...}]
-  const chartData = scores.map((s) => {
+  const chartData = filteredScores.map((s) => {
     const entry: Record<string, string | number> = { date: formatDate(s.date) };
     for (const name of names) {
       if (s.totals[name] !== undefined) entry[name] = s.totals[name];
@@ -68,14 +82,30 @@ export default function Leaderboard({ scores }: Props) {
   }
 
   // Latest scores for the rankings table
-  const latestTotals = scores[scores.length - 1].totals;
+  const latestTotals = filteredScores[filteredScores.length - 1].totals;
   const rankings = Object.entries(latestTotals)
     .sort((a, b) => b[1] - a[1])
     .map(([name, score], i) => ({ rank: i + 1, name, score }));
 
   return (
     <div className="space-y-10">
-      {/* Line chart */}
+      {/* Range selector + chart */}
+      <div>
+        <div className="flex gap-1.5 mb-4">
+          {RANGES.map((r) => (
+            <button
+              key={r.label}
+              onClick={() => setRange(r)}
+              className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                range === r
+                  ? "bg-accent text-white"
+                  : "bg-foreground/8 text-muted hover:text-foreground"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
@@ -118,6 +148,7 @@ export default function Leaderboard({ scores }: Props) {
             })}
           </LineChart>
         </ResponsiveContainer>
+      </div>
       </div>
 
       {/* Rankings table */}
